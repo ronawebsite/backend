@@ -8,6 +8,8 @@
 -- CREATE DATABASE IF NOT EXISTS `ddfichain` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 -- USE `ddfichain`;
 
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- --------------------------------------------------------
@@ -327,7 +329,7 @@ CREATE TABLE `investment_plans` (
   `duration` INT NOT NULL DEFAULT 7,
   `risk_level` VARCHAR(50) NOT NULL DEFAULT 'Low Risk',
   `description` TEXT NOT NULL,
-  `icon` VARCHAR(50) NOT NULL DEFAULT '📈',
+  `icon` VARCHAR(50) NOT NULL DEFAULT 'chart-line',
   `color` VARCHAR(50) NOT NULL DEFAULT 'teal',
   `roi_type` VARCHAR(50) DEFAULT 'Guaranteed Target',
   `max_deposit` DECIMAL(18, 2) DEFAULT 100000.00,
@@ -434,11 +436,11 @@ VALUES
 -- 6. Growth Investment Plans (Guaranteed Target Convergence Plans)
 INSERT INTO `investment_plans` (`id`, `name`, `min_deposit`, `roi`, `duration`, `risk_level`, `description`, `icon`, `color`, `roi_type`, `max_deposit`, `initial_amount`, `target_amount`, `duration_days`, `duration_seconds`, `roi_percentage`, `badge`, `is_active`)
 VALUES
-(1, '24-Hour Express Sprint Plan', 250.00, 30.00, 1, 'Low Risk', 'Rapid short-term guaranteed capital growth targeting +30% ROI in 24 hours.', '⚡', 'emerald', 'Guaranteed Target', 5000.00, 250.00, 325.00, 1, 86400, 30.00, 'Fast Yield', 1),
-(2, '3-Day Institutional Momentum Plan', 500.00, 75.00, 3, 'Low-Medium', 'Dynamic 3-day algorithmic allocation with guaranteed target payout.', '🚀', 'teal', 'Guaranteed Target', 15000.00, 500.00, 875.00, 3, 259200, 75.00, 'Hot', 1),
-(3, '7-Day Alpha Quantum Yield Plan', 1000.00, 150.00, 7, 'Medium Risk', 'Institutional multi-asset yield plan designed to grow $1,000 capital into $2,500.', '📈', 'indigo', 'Guaranteed Target', 50000.00, 1000.00, 2500.00, 7, 604800, 150.00, 'Most Popular', 1),
-(4, '14-Day Wealth Compounder Plan', 2500.00, 280.00, 14, 'Medium Risk', 'Longer horizon compounder plan growing $2,500 into $9,500 guaranteed outcome.', '💎', 'purple', 'Guaranteed Target', 100000.00, 2500.00, 9500.00, 14, 1209600, 280.00, 'High Return', 1),
-(5, '30-Day Sovereign Whale Vault', 5000.00, 500.00, 30, 'Institutional', 'Premier institutional hedge fund strategy multiplying capital by 5x in 30 days.', '👑', 'amber', 'Guaranteed Target', 250000.00, 5000.00, 30000.00, 30, 2592000, 500.00, 'Exclusive', 1);
+(1, '24-Hour Express Sprint Plan', 250.00, 30.00, 1, 'Low Risk', 'Rapid short-term guaranteed capital growth targeting +30% ROI in 24 hours.', 'bolt', 'emerald', 'Guaranteed Target', 5000.00, 250.00, 325.00, 1, 86400, 30.00, 'Fast Yield', 1),
+(2, '3-Day Institutional Momentum Plan', 500.00, 75.00, 3, 'Low-Medium', 'Dynamic 3-day algorithmic allocation with guaranteed target payout.', 'rocket', 'teal', 'Guaranteed Target', 15000.00, 500.00, 875.00, 3, 259200, 75.00, 'Hot', 1),
+(3, '7-Day Alpha Quantum Yield Plan', 1000.00, 150.00, 7, 'Medium Risk', 'Institutional multi-asset yield plan designed to grow $1,000 capital into $2,500.', 'chart-line', 'indigo', 'Guaranteed Target', 50000.00, 1000.00, 2500.00, 7, 604800, 150.00, 'Most Popular', 1),
+(4, '14-Day Wealth Compounder Plan', 2500.00, 280.00, 14, 'Medium Risk', 'Longer horizon compounder plan growing $2,500 into $9,500 guaranteed outcome.', 'gem', 'purple', 'Guaranteed Target', 100000.00, 2500.00, 9500.00, 14, 1209600, 280.00, 'High Return', 1),
+(5, '30-Day Sovereign Whale Vault', 5000.00, 500.00, 30, 'Institutional', 'Premier institutional hedge fund strategy multiplying capital by 5x in 30 days.', 'crown', 'amber', 'Guaranteed Target', 250000.00, 5000.00, 30000.00, 30, 2592000, 500.00, 'Exclusive', 1);
 
 -- 7. Sample Initial Dispute & Support Ticket for Demonstration
 INSERT INTO `support_tickets` (`id`, `ticket_number`, `user_id`, `subject`, `category`, `priority`, `status`, `is_dispute`, `source`, `ai_summary`)

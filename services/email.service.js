@@ -101,13 +101,13 @@ class EmailService {
   async sendEmail(to, subject, html, rawCode = null) {
     logger.info(`[Email Service] Dispatching to ${to}: ${subject} (Code: ${rawCode || 'N/A'})`);
 
-    // Try Resend API if configured
+    // Try Resend API as primary delivery engine
     if (this.resendKey && this.resendKey.startsWith('re_')) {
       try {
         const resp = await axios.post(
           'https://api.resend.com/emails',
           {
-            from: 'Fichain Pro Security <onboarding@resend.dev>',
+            from: env.RESEND_FROM_EMAIL || 'Fichain Pro Security <onboarding@resend.dev>',
             to: [to],
             subject,
             html

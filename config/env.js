@@ -19,6 +19,7 @@ module.exports = {
   REFRESH_EXPIRES_IN: '7d',
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:4200',
   RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+  RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'Fichain Pro <onboarding@resend.dev>',
   GMAIL_USER: process.env.GMAIL_USER || '',
   GMAIL_PASS: process.env.GMAIL_PASS || '',
 };

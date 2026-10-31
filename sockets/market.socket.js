@@ -8,7 +8,10 @@ let io = null;
 function initSocket(server, clientUrl) {
   io = new Server(server, {
     cors: {
-      origin: [clientUrl, 'http://localhost:4200', 'http://127.0.0.1:4200'],
+      origin: (origin, callback) => {
+        // Dynamically allow requesting origin (Netlify, localhost, custom domains)
+        callback(null, true);
+      },
       methods: ['GET', 'POST'],
       credentials: true
     }

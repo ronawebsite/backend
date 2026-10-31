@@ -4,8 +4,9 @@
 -- Database: ddfichain
 -- =====================================================================
 
-CREATE DATABASE IF NOT EXISTS `ddfichain` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `ddfichain`;
+-- If running standalone without a database pre-selected, you can uncomment:
+-- CREATE DATABASE IF NOT EXISTS `ddfichain` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- USE `ddfichain`;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -48,7 +49,7 @@ CREATE TABLE `app_users` (
   `otp_code` VARCHAR(10) DEFAULT NULL,
   `phone` VARCHAR(50) DEFAULT '+1 (555) 019-2834',
   `country` VARCHAR(100) DEFAULT 'United States',
-  `address` TEXT DEFAULT 'Wall Street Financial District, NY',
+  `address` VARCHAR(255) DEFAULT 'Wall Street Financial District, NY',
   `avatar_url` VARCHAR(255) DEFAULT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

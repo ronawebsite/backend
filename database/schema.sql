@@ -396,11 +396,11 @@ CREATE TABLE `plan_candle_ticks` (
 -- Passwords: hash of '123456' ($2a$10$wEkgKq/9hGk3yYg1mN9lE.o2y7H07lRjV99818)
 -- =====================================================================
 
--- 1. App Users (Admin & Trader)
+-- 1. App Users (Admin & Trader) - Password for both is '123456'
 INSERT INTO `app_users` (`id`, `account_id`, `full_name`, `username`, `email`, `password_hash`, `transaction_pin`, `recovery_phrase`, `role`, `kyc_status`, `email_verified`, `country`, `phone`)
 VALUES
-(1, 'ADM-99001', 'Chief Compliance & Risk Admin', 'superadmin', 'admin@mail.com', '$2a$10$Q7eYqXyv6p4a1uGvG3q7Ce6rUv9l2R5jK0hL7nC4kK4pT0bZ6v912', '1234', 'alpha bravery castle delta echo foxtrot golf hotel india juliet kilo lima', 'admin', 'approved', 1, 'United States', '+1 (212) 555-0100'),
-(2, 'USR-77001', 'Alexander Vance (Pro Trader)', 'alexvance', 'user@mail.com', '$2a$10$Q7eYqXyv6p4a1uGvG3q7Ce6rUv9l2R5jK0hL7nC4kK4pT0bZ6v912', '1234', 'comet mike quebec secure orbit uniform papa elephant sierra victor galaxy quick', 'user', 'approved', 1, 'United States', '+1 (212) 555-0199');
+(1, 'ADM-99001', 'Chief Compliance & Risk Admin', 'superadmin', 'admin@mail.com', '$2a$10$puWGfgONORbhv1W71RpsKeDHSLQnRfeqFY4nrNrh9bRYbRjOZVP/q', '1234', 'alpha bravery castle delta echo foxtrot golf hotel india juliet kilo lima', 'admin', 'approved', 1, 'United States', '+1 (212) 555-0100'),
+(2, 'USR-77001', 'Alexander Vance (Pro Trader)', 'alexvance', 'user@mail.com', '$2a$10$puWGfgONORbhv1W71RpsKeDHSLQnRfeqFY4nrNrh9bRYbRjOZVP/q', '1234', 'comet mike quebec secure orbit uniform papa elephant sierra victor galaxy quick', 'user', 'approved', 1, 'United States', '+1 (212) 555-0199');
 
 -- 2. System Settings
 INSERT INTO `system_settings` (`id`, `sitename`, `siteurl`, `enable_email_verification`, `enable_pin_on_login`, `enable_kyc_for_withdrawal`, `enable_mock_trading`, `min_deposit_usd`, `min_withdrawal_usd`, `trading_fee_percent`, `simulated_liquidity_usd`)

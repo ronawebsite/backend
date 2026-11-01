@@ -84,6 +84,7 @@ async function recreateDatabase() {
 
     // Replace dummy hash in SQL file with fresh computed hash
     sqlContent = sqlContent.split('$2a$10$Q7eYqXyv6p4a1uGvG3q7Ce6rUv9l2R5jK0hL7nC4kK4pT0bZ6v912').join(freshPasswordHash);
+    sqlContent = sqlContent.split('$2a$10$puWGfgONORbhv1W71RpsKeDHSLQnRfeqFY4nrNrh9bRYbRjOZVP/q').join(freshPasswordHash);
 
     // 6. Execute SQL script
     console.log('✓ Executing database recreation DDL & seeding initial data...');

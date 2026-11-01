@@ -66,19 +66,19 @@ exports.register = async (req, res, next) => {
 
     const userId = insertRes.insertId;
 
-    // Seed default demo wallets for new user
+    // Seed initial multi-asset wallets for new user (0 starting balance, ready for deposit)
     const defaultAssets = [
-      { symbol: 'USD', name: 'US Dollar', balance: 10000.00 },
-      { symbol: 'USDT', name: 'Tether USD', balance: 5000.00 },
-      { symbol: 'BTC', name: 'Bitcoin', balance: 0.25000000 },
-      { symbol: 'ETH', name: 'Ethereum', balance: 2.50000000 },
-      { symbol: 'SOL', name: 'Solana', balance: 15.00000000 },
-      { symbol: 'BNB', name: 'BNB', balance: 4.00000000 },
-      { symbol: 'TRX', name: 'TRON', balance: 5000.00000000 },
-      { symbol: 'DOGE', name: 'Dogecoin', balance: 2500.00000000 },
-      { symbol: 'LTC', name: 'Litecoin', balance: 10.00000000 },
-      { symbol: 'MATIC', name: 'Polygon', balance: 1000.00000000 },
-      { symbol: 'XRP', name: 'Ripple', balance: 1200.00000000 }
+      { symbol: 'USD', name: 'US Dollar', balance: 0.00 },
+      { symbol: 'USDT', name: 'Tether USD', balance: 0.00 },
+      { symbol: 'BTC', name: 'Bitcoin', balance: 0.00000000 },
+      { symbol: 'ETH', name: 'Ethereum', balance: 0.00000000 },
+      { symbol: 'SOL', name: 'Solana', balance: 0.00000000 },
+      { symbol: 'BNB', name: 'BNB', balance: 0.00000000 },
+      { symbol: 'TRX', name: 'TRON', balance: 0.00000000 },
+      { symbol: 'DOGE', name: 'Dogecoin', balance: 0.00000000 },
+      { symbol: 'LTC', name: 'Litecoin', balance: 0.00000000 },
+      { symbol: 'MATIC', name: 'Polygon', balance: 0.00000000 },
+      { symbol: 'XRP', name: 'Ripple', balance: 0.00000000 }
     ];
 
     for (const a of defaultAssets) {
@@ -89,11 +89,11 @@ exports.register = async (req, res, next) => {
       );
     }
 
-    // Issue virtual card
+    // Issue virtual card (0 initial balance)
     const cardNum = '4' + Math.floor(100000000000000 + Math.random() * 900000000000000).toString().replace(/(\d{4})/g, '$1 ').trim();
     await db.query(
       `INSERT INTO virtual_cards (user_id, card_holder_name, card_number, cvv, expiry, card_type, card_tier, status, balance, spending_limit)
-       VALUES (?, ?, ?, '492', '12/29', 'Visa', 'Platinum World Elite', 'active', 2500.00, 10000.00)`,
+       VALUES (?, ?, ?, '492', '12/29', 'Visa', 'Platinum World Elite', 'active', 0.00, 10000.00)`,
       [userId, full_name.toUpperCase(), cardNum]
     );
 

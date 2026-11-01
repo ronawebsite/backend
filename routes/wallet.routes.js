@@ -6,6 +6,7 @@ const authenticateToken = require('../middlewares/auth.guard');
 router.use(authenticateToken);
 
 router.get('/portfolio', walletController.getWallets);
+router.get('/deposit-methods', walletController.getDepositMethods);
 router.get('/deposit-address/:asset', walletController.getDepositAddress);
 router.post('/deposit-sandbox', walletController.sandboxDeposit);
 router.post('/withdraw/initiate', walletController.initiateWithdrawal);

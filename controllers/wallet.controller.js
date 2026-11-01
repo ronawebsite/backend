@@ -46,16 +46,56 @@ exports.getWallets = async (req, res, next) => {
   }
 };
 
+exports.getDepositMethods = async (req, res, next) => {
+  try {
+    const [methods] = await db.query(
+      'SELECT id, asset_symbol, asset_name, network, deposit_address, memo_tag, instructions, minimum_deposit, confirmations_required FROM platform_deposit_wallets WHERE is_active = 1 ORDER BY id ASC'
+    );
+    res.json({
+      success: true,
+      data: methods
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.getDepositAddress = async (req, res, next) => {
   try {
     const { asset } = req.params;
+    const requestedAsset = asset.toUpperCase();
+
+    // 1. Check admin-configured platform deposit wallets first
+    const [platformWallets] = await db.query(
+      'SELECT * FROM platform_deposit_wallets WHERE asset_symbol = ? AND is_active = 1 LIMIT 1',
+      [requestedAsset]
+    );
+
+    if (platformWallets.length > 0) {
+      const pw = platformWallets[0];
+      return res.json({
+        success: true,
+        data: {
+          asset: pw.asset_symbol,
+          name: pw.asset_name,
+          network: pw.network,
+          deposit_address: pw.deposit_address,
+          memo_tag: pw.memo_tag || null,
+          instructions: pw.instructions || 'Send only the specified asset to this address. Credits after network confirmation.',
+          minimum_deposit: parseFloat(pw.minimum_deposit) || 10.0,
+          confirmations_required: pw.confirmations_required || 3
+        }
+      });
+    }
+
+    // 2. Fallback to user wallet ledger if no admin platform wallet found
     const [wallets] = await db.query(
       'SELECT * FROM user_wallets WHERE user_id = ? AND asset_symbol = ?',
-      [req.user.id, asset.toUpperCase()]
+      [req.user.id, requestedAsset]
     );
 
     if (wallets.length === 0) {
-      return res.status(404).json({ success: false, error: 'Asset wallet not found' });
+      return res.status(404).json({ success: false, error: 'Deposit method not found for ' + requestedAsset });
     }
 
     const wallet = wallets[0];
@@ -72,6 +112,8 @@ exports.getDepositAddress = async (req, res, next) => {
         name: wallet.asset_name,
         network: wallet.network || 'Mainnet Layer 1',
         deposit_address: address,
+        memo_tag: null,
+        instructions: 'Send only the specified asset to this address.',
         minimum_deposit: 10.0,
         confirmations_required: 3
       }

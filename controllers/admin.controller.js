@@ -709,3 +709,136 @@ exports.toggleLiveDrift = async (req, res, next) => {
     next(error);
   }
 };
+
+// =========================================================================
+// PLATFORM DEPOSIT WALLETS (Admin Configured Deposit Addresses)
+// =========================================================================
+exports.getDepositWallets = async (req, res, next) => {
+  try {
+    const [wallets] = await db.query(
+      'SELECT * FROM platform_deposit_wallets ORDER BY id ASC'
+    );
+    res.json({ success: true, data: wallets });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.createDepositWallet = async (req, res, next) => {
+  try {
+    const {
+      asset_symbol,
+      asset_name,
+      network,
+      deposit_address,
+      memo_tag,
+      instructions,
+      minimum_deposit,
+      confirmations_required,
+      is_active
+    } = req.body;
+
+    if (!asset_symbol || !deposit_address) {
+      return res.status(400).json({ success: false, error: 'Asset symbol and deposit address are required' });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO platform_deposit_wallets 
+       (asset_symbol, asset_name, network, deposit_address, memo_tag, instructions, minimum_deposit, confirmations_required, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        asset_symbol.toUpperCase().trim(),
+        asset_name ? asset_name.trim() : asset_symbol.toUpperCase().trim(),
+        network ? network.trim() : 'Mainnet',
+        deposit_address.trim(),
+        memo_tag ? memo_tag.trim() : null,
+        instructions ? instructions.trim() : 'Send only the specified asset to this address. Credits after network confirmation.',
+        minimum_deposit !== undefined ? parseFloat(minimum_deposit) : 10.0,
+        confirmations_required !== undefined ? parseInt(confirmations_required, 10) : 3,
+        is_active !== undefined ? (is_active ? 1 : 0) : 1
+      ]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: `Deposit wallet for ${asset_symbol.toUpperCase()} created successfully`,
+      data: { id: result.insertId }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.updateDepositWallet = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      asset_symbol,
+      asset_name,
+      network,
+      deposit_address,
+      memo_tag,
+      instructions,
+      minimum_deposit,
+      confirmations_required,
+      is_active
+    } = req.body;
+
+    if (!deposit_address) {
+      return res.status(400).json({ success: false, error: 'Deposit address cannot be empty' });
+    }
+
+    await db.query(
+      `UPDATE platform_deposit_wallets
+       SET asset_symbol = COALESCE(?, asset_symbol),
+           asset_name = COALESCE(?, asset_name),
+           network = COALESCE(?, network),
+           deposit_address = ?,
+           memo_tag = ?,
+           instructions = COALESCE(?, instructions),
+           minimum_deposit = COALESCE(?, minimum_deposit),
+           confirmations_required = COALESCE(?, confirmations_required),
+           is_active = COALESCE(?, is_active)
+       WHERE id = ?`,
+      [
+        asset_symbol ? asset_symbol.toUpperCase().trim() : null,
+        asset_name ? asset_name.trim() : null,
+        network ? network.trim() : null,
+        deposit_address.trim(),
+        memo_tag !== undefined ? (memo_tag ? memo_tag.trim() : null) : null,
+        instructions !== undefined ? instructions : null,
+        minimum_deposit !== undefined ? parseFloat(minimum_deposit) : null,
+        confirmations_required !== undefined ? parseInt(confirmations_required, 10) : null,
+        is_active !== undefined ? (is_active ? 1 : 0) : null,
+        id
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: 'Deposit address updated successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.toggleDepositWallet = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await db.query('UPDATE platform_deposit_wallets SET is_active = NOT is_active WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Deposit wallet status updated' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.deleteDepositWallet = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await db.query('DELETE FROM platform_deposit_wallets WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Deposit wallet deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};

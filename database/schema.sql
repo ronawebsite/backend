@@ -15,6 +15,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- --------------------------------------------------------
 -- Drop existing tables for a clean recreation
 -- --------------------------------------------------------
+DROP TABLE IF EXISTS `platform_deposit_wallets`;
 DROP TABLE IF EXISTS `plan_candle_ticks`;
 DROP TABLE IF EXISTS `investments`;
 DROP TABLE IF EXISTS `investment_plans`;
@@ -390,8 +391,25 @@ CREATE TABLE `plan_candle_ticks` (
   CONSTRAINT `fk_ticks_investment` FOREIGN KEY (`investment_id`) REFERENCES `investments` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- =====================================================================
--- INITIAL SEED DATA
+-- --------------------------------------------------------
+-- 17. Table: platform_deposit_wallets
+-- Admin-configured deposit addresses for multi-asset funding
+-- --------------------------------------------------------
+CREATE TABLE `platform_deposit_wallets` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `asset_symbol` VARCHAR(16) NOT NULL,
+  `asset_name` VARCHAR(64) NOT NULL,
+  `network` VARCHAR(64) NOT NULL DEFAULT 'Mainnet',
+  `deposit_address` VARCHAR(255) NOT NULL,
+  `memo_tag` VARCHAR(64) DEFAULT NULL,
+  `instructions` VARCHAR(255) DEFAULT 'Send only the specified asset to this address. Credits after network confirmation.',
+  `minimum_deposit` DECIMAL(18, 6) DEFAULT 10.000000,
+  `confirmations_required` INT DEFAULT 3,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `idx_asset_network` (`asset_symbol`, `network`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 -- Default accounts, wallets, quantitative bots, and growth plans
 -- Passwords: hash of '123456' ($2a$10$wEkgKq/9hGk3yYg1mN9lE.o2y7H07lRjV99818)
 -- =====================================================================
@@ -399,8 +417,8 @@ CREATE TABLE `plan_candle_ticks` (
 -- 1. App Users (Admin & Trader) - Password for both is '123456'
 INSERT INTO `app_users` (`id`, `account_id`, `full_name`, `username`, `email`, `password_hash`, `transaction_pin`, `recovery_phrase`, `role`, `kyc_status`, `email_verified`, `country`, `phone`)
 VALUES
-(1, 'ADM-99001', 'Chief Compliance & Risk Admin', 'superadmin', 'admin@mail.com', '$2a$10$puWGfgONORbhv1W71RpsKeDHSLQnRfeqFY4nrNrh9bRYbRjOZVP/q', '1234', 'alpha bravery castle delta echo foxtrot golf hotel india juliet kilo lima', 'admin', 'approved', 1, 'United States', '+1 (212) 555-0100'),
-(2, 'USR-77001', 'Alexander Vance (Pro Trader)', 'alexvance', 'user@mail.com', '$2a$10$puWGfgONORbhv1W71RpsKeDHSLQnRfeqFY4nrNrh9bRYbRjOZVP/q', '1234', 'comet mike quebec secure orbit uniform papa elephant sierra victor galaxy quick', 'user', 'approved', 1, 'United States', '+1 (212) 555-0199');
+(1, 'ADM-99001', 'Chief Compliance & Risk Admin', 'superadmin', 'admin@mail.com', '$2a$10$oXVyH398ULF7dgMCnYWx9.E3lHxAoalgkPu7AyCG52YTWbsU2GCNq', '1234', 'alpha bravery castle delta echo foxtrot golf hotel india juliet kilo lima', 'admin', 'approved', 1, 'United States', '+1 (212) 555-0100'),
+(2, 'USR-77001', 'Alexander Vance (Pro Trader)', 'alexvance', 'user@mail.com', '$2a$10$oXVyH398ULF7dgMCnYWx9.E3lHxAoalgkPu7AyCG52YTWbsU2GCNq', '1234', 'comet mike quebec secure orbit uniform papa elephant sierra victor galaxy quick', 'user', 'approved', 1, 'United States', '+1 (212) 555-0199');
 
 -- 2. System Settings
 INSERT INTO `system_settings` (`id`, `sitename`, `siteurl`, `enable_email_verification`, `enable_pin_on_login`, `enable_kyc_for_withdrawal`, `enable_mock_trading`, `min_deposit_usd`, `min_withdrawal_usd`, `trading_fee_percent`, `simulated_liquidity_usd`)
@@ -453,5 +471,18 @@ VALUES
 (1, 2, 'USER', 'Alexander Vance', 'user@mail.com', 'Hello supervisor, I noticed the latest managed trade had an adjustment. Could you explain the payout date?', 1),
 (1, 1, 'ADMIN', 'Chief Compliance Admin', 'admin@mail.com', 'Hello Alexander. Your managed trade is currently tracking on schedule with targeted profit. Settlement will be executed upon plan target maturation.', 1),
 (2, 2, 'USER', 'Alexander Vance', 'user@mail.com', 'Hi, I would like to expand my daily virtual card limit from $10,000 to $25,000 for travel.', 1);
+
+-- 8. Platform Deposit Wallets (Admin-Configured Funding Addresses)
+INSERT INTO `platform_deposit_wallets` (`id`, `asset_symbol`, `asset_name`, `network`, `deposit_address`, `memo_tag`, `minimum_deposit`, `is_active`)
+VALUES
+(1, 'USDT', 'Tether USD', 'TRC20 (Tron)', 'TYDzsYUEpvnYmQk4zGP9sWWcTEd3GL7q3b', NULL, 10.000000, 1),
+(2, 'BTC', 'Bitcoin', 'Bitcoin Mainnet', 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', NULL, 0.000500, 1),
+(3, 'ETH', 'Ethereum', 'ERC20 (Ethereum)', '0x71C8fb861337577648bf4A36b69D0388A152fC3b', NULL, 0.010000, 1),
+(4, 'SOL', 'Solana', 'Solana SPL', 'HN7cABqLq46Es1jh92dQQisAq662SmxELLLsHHe4YWrH', NULL, 0.100000, 1),
+(5, 'BNB', 'BNB', 'BEP20 (BNB Chain)', '0x4838B106FCe9647Bdf1E7877BF73cE8B0BAD5f97', NULL, 0.050000, 1),
+(6, 'TRX', 'TRON', 'TRC20', 'TNDF57bTf4nK9m2q5x8v7h6y5r4e3w2q1a', NULL, 50.000000, 1),
+(7, 'XRP', 'Ripple', 'XRPL (Ripple Ledger)', 'rEb8TK3gBgk5auZyyb6MfCEmOMtdVYS556', '10928374', 20.000000, 1),
+(8, 'DOGE', 'Dogecoin', 'Dogecoin Native', 'DMqRV5v7L3nFz9Qp4X2w7Y8k6M5N1B3V4C', NULL, 50.000000, 1),
+(9, 'LTC', 'Litecoin', 'Litecoin Native', 'ltc1qg6v2s5x4q8e2h7k8m3n2p5v6x9', NULL, 0.100000, 1);
 
 SET FOREIGN_KEY_CHECKS = 1;

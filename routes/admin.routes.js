@@ -30,4 +30,11 @@ router.get('/prompts', adminController.getBrokerPrompts);
 router.delete('/prompts/:id', adminController.dismissBrokerPrompt);
 router.post('/toggle-drift', adminController.toggleLiveDrift);
 
+// Platform Deposit Wallets Management
+router.get('/deposit-wallets', adminController.getDepositWallets);
+router.post('/deposit-wallets', adminController.createDepositWallet);
+router.put('/deposit-wallets/:id', adminController.updateDepositWallet);
+router.patch('/deposit-wallets/:id/toggle', adminController.toggleDepositWallet);
+router.delete('/deposit-wallets/:id', adminController.deleteDepositWallet);
+
 module.exports = router;

@@ -28,6 +28,9 @@ const planRoutes = require('./routes/plan.routes');
 // Start Real-Time Growth Plan Engine
 require('./services/planEngine.service');
 
+// Initialize Platform Deposit Wallets
+require('./services/depositWallet.service');
+
 const app = express();
 const server = http.createServer(app);
 

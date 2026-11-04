@@ -205,7 +205,7 @@ exports.getManagedTrades = async (req, res, next) => {
       SELECT t.*, u.full_name, u.email, u.account_id 
       FROM trades t 
       JOIN app_users u ON t.user_id = u.id 
-      WHERE t.is_managed = 1
+      WHERE (t.is_managed = 1 OR t.target_outcome != 'CLOSED' OR t.status = 'OPEN')
     `;
     const params = [];
     if (userId) {
@@ -323,7 +323,7 @@ exports.alterTradeProfit = async (req, res, next) => {
 
     await db.query(
       `UPDATE trades 
-       SET current_profit = ?, target_outcome = ?, admin_notes = COALESCE(?, admin_notes), intervention_at = NOW(), realized_pnl = ?
+       SET current_profit = ?, target_outcome = ?, admin_notes = COALESCE(?, admin_notes), intervention_at = NOW(), realized_pnl = ?, is_managed = 1
        WHERE id = ?`,
       [updatedProfit, outcome, notes, realizedPnl, trade_id]
     );
@@ -387,20 +387,26 @@ exports.closeTrade = async (req, res, next) => {
       [finalProfit, finalProfit, outcome || 'CLOSED', trade_id]
     );
 
-    // Credit universal USD wallet
+    // Credit client wallet (USDT or USD)
+    const [existingWallets] = await db.query(
+      `SELECT * FROM user_wallets WHERE user_id = ? AND asset_symbol IN ('USDT', 'USD') ORDER BY FIELD(asset_symbol, 'USDT', 'USD') LIMIT 1`,
+      [trade.user_id]
+    );
+    const targetSymbol = existingWallets.length > 0 ? existingWallets[0].asset_symbol : 'USDT';
+
     await db.query(
-      `UPDATE user_wallets 
-       SET balance = GREATEST(0, balance + ?) 
-       WHERE user_id = ? AND asset_symbol = 'USD'`,
-      [finalProfit, trade.user_id]
+      `INSERT INTO user_wallets (user_id, asset_symbol, asset_name, balance) 
+       VALUES (?, ?, ?, GREATEST(0, ?)) 
+       ON DUPLICATE KEY UPDATE balance = GREATEST(0, balance + ?)`,
+      [trade.user_id, targetSymbol, targetSymbol, finalProfit, finalProfit]
     );
 
     // Record audited financial transaction
     await db.query(
       `INSERT INTO transactions 
        (user_id, type, asset_symbol, amount, amount_usd, status, notes) 
-       VALUES (?, 'trade', 'USD', ?, ?, 'completed', ?)`,
-      [trade.user_id, Math.abs(finalProfit), finalProfit, `Managed Trade #${trade_id} closed: ${outcome || 'CLOSED'} ($${finalProfit.toFixed(2)})`]
+       VALUES (?, 'trade', ?, ?, ?, 'completed', ?)`,
+      [trade.user_id, targetSymbol, Math.abs(finalProfit), finalProfit, `Managed Trade #${trade_id} closed: ${outcome || 'CLOSED'} ($${finalProfit.toFixed(2)})`]
     );
 
     const [closedRows] = await db.query(

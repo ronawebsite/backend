@@ -153,7 +153,7 @@ exports.getPositions = async (req, res, next) => {
 exports.getManagedTrades = async (req, res, next) => {
   try {
     const [trades] = await db.query(
-      "SELECT * FROM trades WHERE user_id = ? AND is_managed = 1 ORDER BY id DESC LIMIT 20",
+      "SELECT * FROM trades WHERE user_id = ? AND (is_managed = 1 OR target_outcome != 'CLOSED' OR status = 'OPEN') ORDER BY id DESC LIMIT 30",
       [req.user.id]
     );
     res.json({ success: true, data: trades });

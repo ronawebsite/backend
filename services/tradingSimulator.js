@@ -76,8 +76,8 @@ class TradingSimulator {
       );
 
       const [res] = await db.query(
-        `INSERT INTO trades (user_id, pair, side, order_type, price, amount, total_value, fee, status)
-         VALUES (?, ?, ?, 'LIMIT', ?, ?, ?, ?, 'OPEN')`,
+        `INSERT INTO trades (user_id, pair, side, order_type, price, amount, total_value, fee, status, is_managed, current_profit, target_outcome)
+         VALUES (?, ?, ?, 'LIMIT', ?, ?, ?, ?, 'OPEN', 1, 0.00, 'IN_PROGRESS')`,
         [userId, pair, side, cleanPrice, cleanAmount, totalValue, fee]
       );
 
@@ -133,10 +133,10 @@ class TradingSimulator {
         );
       }
 
-      // Record trade in trades table
+      // Record trade in trades table with live tracking enabled
       const [tradeRes] = await conn.query(
-        `INSERT INTO trades (user_id, pair, side, order_type, price, amount, filled_amount, total_value, fee, status, filled_at)
-         VALUES (?, ?, ?, 'MARKET', ?, ?, ?, ?, ?, 'FILLED', NOW())`,
+        `INSERT INTO trades (user_id, pair, side, order_type, price, amount, filled_amount, total_value, fee, status, filled_at, is_managed, current_profit, target_outcome)
+         VALUES (?, ?, ?, 'MARKET', ?, ?, ?, ?, ?, 'FILLED', NOW(), 1, 0.00, 'IN_PROGRESS')`,
         [userId, pair, side, price, amount, amount, totalValue, fee]
       );
 

@@ -21,6 +21,9 @@ async function testConnection() {
     const conn = await pool.getConnection();
     logger.info(`[Database] MySQL Connection Pool initialized on ${env.DB_HOST}:${env.DB_PORT} [DB: ${env.DB_NAME}]`);
     conn.release();
+
+    // Ensure receipt_url column exists on transactions table
+    await pool.query('ALTER TABLE transactions ADD COLUMN IF NOT EXISTS receipt_url VARCHAR(500) DEFAULT NULL AFTER notes').catch(() => {});
   } catch (err) {
     logger.error(`[Database Error] Failed to connect to MySQL: ${err.message}`);
   }

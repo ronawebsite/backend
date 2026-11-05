@@ -3,6 +3,9 @@ const marketStream = require('../services/marketStream.service');
 const emailService = require('../services/email.service');
 const statementService = require('../services/statement.service');
 const crypto = require('crypto');
+const path = require('path');
+const fs = require('fs');
+const { notifyUser, getIO } = require('../sockets/market.socket');
 
 exports.getWallets = async (req, res, next) => {
   try {
@@ -123,14 +126,14 @@ exports.getDepositAddress = async (req, res, next) => {
   }
 };
 
-// Simulated Instant Deposit Sandbox
-exports.sandboxDeposit = async (req, res, next) => {
+// Submit Client Deposit Request (Awaiting Admin Confirmation & Release)
+exports.submitDepositRequest = async (req, res, next) => {
   try {
-    const { asset, amount, tx_hash } = req.body;
+    const { asset, amount, tx_hash, network, notes, destination_address, receipt_base64 } = req.body;
     const numAmount = parseFloat(amount);
 
     if (!asset || isNaN(numAmount) || numAmount <= 0) {
-      return res.status(400).json({ success: false, error: 'Valid asset and amount are required' });
+      return res.status(400).json({ success: false, error: 'Valid coin asset and deposit amount are required' });
     }
 
     let usdPrice = 1.0;
@@ -140,30 +143,83 @@ exports.sandboxDeposit = async (req, res, next) => {
     }
     const amountUsd = parseFloat((numAmount * usdPrice).toFixed(2));
 
-    // Credit user wallet
-    await db.query(
-      `INSERT INTO user_wallets (user_id, asset_symbol, asset_name, balance)
-       VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE balance = balance + VALUES(balance)`,
-      [req.user.id, asset.toUpperCase(), asset.toUpperCase(), numAmount]
+    // Handle receipt upload: via multipart file or base64 data URL
+    let receiptUrl = null;
+    if (req.file) {
+      receiptUrl = `/uploads/receipts/${req.file.filename}`;
+    } else if (receipt_base64 && typeof receipt_base64 === 'string' && receipt_base64.startsWith('data:image')) {
+      try {
+        const matches = receipt_base64.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          const ext = matches[1].replace('jpeg', 'jpg');
+          const buffer = Buffer.from(matches[2], 'base64');
+          const receiptsDir = path.join(__dirname, '../uploads/receipts');
+          if (!fs.existsSync(receiptsDir)) {
+            fs.mkdirSync(receiptsDir, { recursive: true });
+          }
+          const filename = `receipt-${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`;
+          fs.writeFileSync(path.join(receiptsDir, filename), buffer);
+          receiptUrl = `/uploads/receipts/${filename}`;
+        }
+      } catch (err) {
+        console.error('Error saving base64 receipt:', err);
+      }
+    }
+
+    const hash = tx_hash || `DEP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+    const userNotes = notes ? `Client note: ${notes}` : 'Deposit payment confirmation submitted. Awaiting supervisor review.';
+
+    // Record as PENDING transaction in DB (NO wallet funds credited until admin confirms!)
+    const [txRes] = await db.query(
+      `INSERT INTO transactions (user_id, type, asset_symbol, network, amount, amount_usd, status, tx_hash, destination_address, notes, receipt_url)
+       VALUES (?, 'deposit', ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
+      [
+        req.user.id,
+        asset.toUpperCase(),
+        network || 'Crypto Network',
+        numAmount,
+        amountUsd,
+        hash,
+        destination_address || null,
+        userNotes,
+        receiptUrl
+      ]
     );
 
-    // Record completed transaction
-    const hash = tx_hash || `0x${crypto.randomBytes(32).toString('hex')}`;
-    const [txRes] = await db.query(
-      `INSERT INTO transactions (user_id, type, asset_symbol, network, amount, amount_usd, status, tx_hash, notes)
-       VALUES (?, 'deposit', ?, 'Simulated Network', ?, ?, 'completed', ?, 'Sandbox Instant Deposit Confirmed')`,
-      [req.user.id, asset.toUpperCase(), numAmount, amountUsd, hash]
-    );
+    // Notify Admin via WebSockets
+    const io = getIO();
+    if (io) {
+      io.emit('admin:new_transaction', {
+        id: txRes.insertId,
+        user_id: req.user.id,
+        type: 'deposit',
+        asset_symbol: asset.toUpperCase(),
+        amount: numAmount,
+        amount_usd: amountUsd,
+        receipt_url: receiptUrl,
+        status: 'pending'
+      });
+    }
 
     res.status(201).json({
       success: true,
-      message: `Deposit of ${numAmount} ${asset} ($${amountUsd}) confirmed and credited`,
-      data: { tx_id: txRes.insertId, tx_hash: hash }
+      message: `Deposit confirmation for ${numAmount} ${asset} received. It is currently pending supervisor review. Funds will be released once verified.`,
+      data: {
+        transaction_id: txRes.insertId,
+        status: 'pending',
+        amount: numAmount,
+        asset: asset.toUpperCase(),
+        receipt_url: receiptUrl
+      }
     });
   } catch (error) {
     next(error);
   }
+};
+
+// Deprecated Sandbox Deposit - now redirects to pending deposit request (no instant credit)
+exports.sandboxDeposit = async (req, res, next) => {
+  return exports.submitDepositRequest(req, res, next);
 };
 
 // 2-Step Withdrawal Step 1: Request & Send 6-Digit Email PIN

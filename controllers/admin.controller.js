@@ -146,12 +146,65 @@ exports.reviewTransaction = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Status must be completed, failed, or cancelled' });
     }
 
+    const [txRows] = await db.query('SELECT * FROM transactions WHERE id = ?', [transaction_id]);
+    if (txRows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Transaction not found' });
+    }
+
+    const tx = txRows[0];
+
+    // If approving a pending deposit -> Release & credit funds to the user's wallet!
+    if (status === 'completed' && tx.status === 'pending' && tx.type === 'deposit') {
+      const asset = tx.asset_symbol.toUpperCase();
+      const amount = parseFloat(tx.amount);
+
+      await db.query(
+        `INSERT INTO user_wallets (user_id, asset_symbol, asset_name, balance)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE balance = balance + VALUES(balance)`,
+        [tx.user_id, asset, asset, amount]
+      );
+
+      // Real-time notification & balance push to user
+      notifyUser(tx.user_id, 'wallet:balance_update', {
+        type: 'DEPOSIT_APPROVED',
+        asset: asset,
+        amount: amount,
+        message: `Your deposit of ${amount} ${asset} has been confirmed and released to your account!`
+      });
+    }
+
+    // If rejecting a pending withdrawal -> Return locked funds to available balance
+    if ((status === 'failed' || status === 'cancelled') && tx.status === 'pending' && tx.type === 'withdrawal') {
+      const asset = tx.asset_symbol.toUpperCase();
+      const amount = parseFloat(tx.amount);
+
+      await db.query(
+        `UPDATE user_wallets 
+         SET balance = balance + ?, locked_balance = GREATEST(0, locked_balance - ?)
+         WHERE user_id = ? AND asset_symbol = ?`,
+        [amount, amount, tx.user_id, asset]
+      );
+
+      notifyUser(tx.user_id, 'wallet:balance_update', {
+        type: 'WITHDRAWAL_REJECTED',
+        asset: asset,
+        amount: amount,
+        message: `Your cash out request of ${amount} ${asset} was declined. Balance returned to wallet.`
+      });
+    }
+
     await db.query(
-      'UPDATE transactions SET status = ?, tx_hash = COALESCE(?, tx_hash) WHERE id = ?',
+      'UPDATE transactions SET status = ?, tx_hash = COALESCE(?, tx_hash), updated_at = NOW() WHERE id = ?',
       [status, tx_hash || null, transaction_id]
     );
 
-    res.json({ success: true, message: `Transaction #${transaction_id} updated to ${status}` });
+    res.json({
+      success: true,
+      message: status === 'completed' && tx.type === 'deposit'
+        ? `Deposit #${transaction_id} approved! ${tx.amount} ${tx.asset_symbol} has been credited and released to client account.`
+        : `Transaction #${transaction_id} updated to ${status}`
+    });
   } catch (error) {
     next(error);
   }

@@ -142,17 +142,28 @@ exports.subscribeToPlan = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Investment amount must be greater than zero' });
     }
 
-    // Check user universal USD cash balance
+    // Check user universal USD cash balance (supports USD or USDT)
     const [wallets] = await db.query(
-      "SELECT balance FROM user_wallets WHERE user_id = ? AND asset_symbol = 'USD'",
+      "SELECT asset_symbol, balance FROM user_wallets WHERE user_id = ? AND asset_symbol IN ('USD', 'USDT') ORDER BY FIELD(asset_symbol, 'USD', 'USDT')",
       [req.user.id]
     );
 
-    const usdBalance = wallets.length > 0 ? parseFloat(wallets[0].balance) : 0;
-    if (usdBalance < initialAmount) {
+    let fundingAsset = 'USD';
+    const usdWallet = wallets.find(w => w.asset_symbol === 'USD');
+    const usdtWallet = wallets.find(w => w.asset_symbol === 'USDT');
+
+    if (usdWallet && parseFloat(usdWallet.balance) >= initialAmount) {
+      fundingAsset = 'USD';
+    } else if (usdtWallet && parseFloat(usdtWallet.balance) >= initialAmount) {
+      fundingAsset = 'USDT';
+    } else {
+      const maxBal = Math.max(
+        usdWallet ? parseFloat(usdWallet.balance) : 0,
+        usdtWallet ? parseFloat(usdtWallet.balance) : 0
+      );
       return res.status(400).json({
         success: false,
-        error: `Insufficient USD balance ($${usdBalance.toFixed(2)}). You need $${initialAmount.toFixed(2)} to activate this plan.`
+        error: `Insufficient balance ($${maxBal.toFixed(2)}). You need $${initialAmount.toFixed(2)} to activate this plan.`
       });
     }
 
@@ -166,24 +177,24 @@ exports.subscribeToPlan = async (req, res, next) => {
     const startDate = new Date();
     const endDate = new Date(startDate.getTime() + (durationSeconds * 1000));
 
-    // 1. Deduct invested amount from user's universal USD cash wallet
+    // 1. Deduct invested amount from user's funding wallet
     await db.query(
-      "UPDATE user_wallets SET balance = balance - ? WHERE user_id = ? AND asset_symbol = 'USD'",
-      [initialAmount, req.user.id]
+      "UPDATE user_wallets SET balance = balance - ? WHERE user_id = ? AND asset_symbol = ?",
+      [initialAmount, req.user.id, fundingAsset]
     );
 
     // 2. Insert transaction record
     await db.query(
       `INSERT INTO transactions (user_id, type, asset_symbol, amount, amount_usd, fee, status, notes)
-       VALUES (?, 'INVESTMENT_DEPOSIT', 'USD', ?, ?, 0.00, 'completed', ?)`,
-      [req.user.id, initialAmount, initialAmount, `Subscription to Plan: ${plan.name} (Target: $${targetAmount})`]
+       VALUES (?, 'INVESTMENT_DEPOSIT', ?, ?, ?, 0.00, 'completed', ?)`,
+      [req.user.id, fundingAsset, initialAmount, initialAmount, `Subscription to Plan: ${plan.name} (Target: $${targetAmount})`]
     );
 
-    // 3. Create investment record
+    // 3. Create investment record (populate both amount and invested_amount)
     const [result] = await db.query(
-      `INSERT INTO investments (user_id, plan_id, plan_name, invested_amount, target_amount, current_value, current_profit, duration_days, duration_seconds, start_date, end_date, status)
-       VALUES (?, ?, ?, ?, ?, ?, 0.00, ?, ?, ?, ?, 'ACTIVE')`,
-      [req.user.id, plan.id, plan.name, initialAmount, targetAmount, initialAmount, durationDays, durationSeconds, startDate, endDate]
+      `INSERT INTO investments (user_id, plan_id, plan_name, amount, invested_amount, target_amount, current_value, current_profit, duration_days, duration_seconds, start_date, end_date, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0.00, ?, ?, ?, ?, 'ACTIVE')`,
+      [req.user.id, plan.id, plan.name, initialAmount, initialAmount, targetAmount, initialAmount, durationDays, durationSeconds, startDate, endDate]
     );
 
     const investmentId = result.insertId;

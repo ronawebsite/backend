@@ -25,6 +25,9 @@ async function testConnection() {
     // 1. Ensure receipt_url column exists on transactions table
     await pool.query('ALTER TABLE transactions ADD COLUMN IF NOT EXISTS receipt_url VARCHAR(500) DEFAULT NULL AFTER notes').catch(() => {});
 
+    // Ensure investments.amount has a default value so activations never fail
+    await pool.query('ALTER TABLE investments MODIFY COLUMN amount DECIMAL(15, 2) NOT NULL DEFAULT 0.00').catch(() => {});
+
     // 2. Ensure platform_deposit_wallets table exists
     await pool.query(`
       CREATE TABLE IF NOT EXISTS platform_deposit_wallets (
